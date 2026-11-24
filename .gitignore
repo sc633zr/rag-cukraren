@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+tools/
+data/pdfs/
+data/index/
+dokumentacia/*.tex
+dokumentacia/*.aux
+dokumentacia/*.log
+dokumentacia/*.out
+dokumentacia/*.toc
+dokumentacia/*_tmp.pdf

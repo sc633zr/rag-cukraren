@@ -1,0 +1,272 @@
+{
+  "Cukraren": [
+    "re:cukrár[eňn]",
+    "pastry shop",
+    "patisserie",
+    "confectioner"
+  ],
+  "Product": [
+    "produkt",
+    "výrob"
+  ],
+  "Beverage": [
+    "nápoj",
+    "drink"
+  ],
+  "Tea": [
+    "čaj"
+  ],
+  "Coffee": [
+    "káv",
+    "kávu",
+    "espresso",
+    "cappuccino",
+    "latte"
+  ],
+  "HotChocolate": [
+    "horúca čokoláda",
+    "horúcej čokolád",
+    "hot cocoa"
+  ],
+  "Milkshake": [
+    "mliečny koktail",
+    "shake"
+  ],
+  "Dessert": [
+    "dezert",
+    "zákusk",
+    "sladkos"
+  ],
+  "Pudding": [
+    "puding"
+  ],
+  "Tiramisu": [
+    "tiramisu"
+  ],
+  "Pavlova": [
+    "pavlov"
+  ],
+  "CremeBrulee": [
+    "crème brûlée",
+    "creme brulee",
+    "krém brulé"
+  ],
+  "Mousse": [
+    "mousse",
+    "penov"
+  ],
+  "Pastry": [
+    "pečiv",
+    "lístkové cesto",
+    "puff pastry"
+  ],
+  "Croissant": [
+    "croissant",
+    "rožok",
+    "rožk"
+  ],
+  "Muffin": [
+    "muffin"
+  ],
+  "DanishPastry": [
+    "danish",
+    "dánske pečivo"
+  ],
+  "Macaron": [
+    "makrónk",
+    "macaron"
+  ],
+  "Donut": [
+    "šišk",
+    "doughnut",
+    "donut"
+  ],
+  "Cake": [
+    "tort",
+    "koláč"
+  ],
+  "FruitCake": [
+    "ovocná tort",
+    "ovocný koláč",
+    "ovocnú tort"
+  ],
+  "ChocolateCake": [
+    "čokoládová tort",
+    "čokoládovú tort",
+    "čokoládovej tort",
+    "čokoládový koláč",
+    "chocolate cake"
+  ],
+  "CarrotCake": [
+    "mrkvov"
+  ],
+  "Cheesecake": [
+    "cheesecake",
+    "tvarohový koláč",
+    "tvarohová tort"
+  ],
+  "IceCream": [
+    "zmrzlin",
+    "ice cream",
+    "gelato"
+  ],
+  "Ingredient": [
+    "surovin",
+    "ingredien",
+    "prísad"
+  ],
+  "Sugar": [
+    "cukor",
+    "cukru",
+    "cukrom",
+    "sugar"
+  ],
+  "Fruit": [
+    "ovoc"
+  ],
+  "CoffeeIngredient": [
+    "kávové zrn",
+    "coffee bean"
+  ],
+  "Vanilla": [
+    "vanil"
+  ],
+  "Flour": [
+    "múk",
+    "múka",
+    "flour"
+  ],
+  "DairyProduct": [
+    "mliečn",
+    "dairy"
+  ],
+  "Chocolate": [
+    "čokolád",
+    "chocolate"
+  ],
+  "Person": [
+    "osob"
+  ],
+  "Customer": [
+    "zákazník",
+    "hosť"
+  ],
+  "Employee": [
+    "zamestnan",
+    "personál",
+    "staff"
+  ],
+  "PastryChef": [
+    "re:cukrár(?![eňn])",
+    "pastry chef",
+    "pâtissier"
+  ],
+  "Cashier": [
+    "pokladní",
+    "cashier"
+  ],
+  "Manager": [
+    "manažér",
+    "vedúc"
+  ],
+  "Baker": [
+    "pekár",
+    "baker"
+  ],
+  "Order": [
+    "objednáv"
+  ],
+  "PaymentMethod": [
+    "platb",
+    "platob",
+    "zaplat",
+    "payment"
+  ],
+  "Card": [
+    "kart"
+  ],
+  "Cash": [
+    "hotovos",
+    "cash"
+  ],
+  "Mascarpone": [
+    "mascarpon"
+  ],
+  "CreamCheese": [
+    "smotanový syr",
+    "smotanového syr",
+    "smotanovým syr",
+    "tvaroh",
+    "cream cheese"
+  ],
+  "Cream": [
+    "smotan",
+    "šľahačk",
+    "šlahačk"
+  ],
+  "Butter": [
+    "maslo",
+    "masla",
+    "maslom",
+    "masle",
+    "butter"
+  ],
+  "Milk": [
+    "mliek",
+    "milk"
+  ],
+  "Egg": [
+    "vajc",
+    "vajec",
+    "vajíčk",
+    "žĺtk",
+    "bielk",
+    "egg"
+  ],
+  "Cocoa": [
+    "kakao",
+    "kakaa",
+    "cocoa"
+  ],
+  "Biscuit": [
+    "sušienk",
+    "keks",
+    "biscuit"
+  ],
+  "Ladyfinger": [
+    "savoiard",
+    "cukrárske piškóty",
+    "ladyfinger"
+  ],
+  "Nuts": [
+    "orech",
+    "oriešk"
+  ],
+  "Almond": [
+    "mandl",
+    "mandľ",
+    "almond"
+  ],
+  "Carrot": [
+    "re:mrkv(?!ov)"
+  ],
+  "Cinnamon": [
+    "škoric",
+    "cinnamon"
+  ],
+  "Yeast": [
+    "drožd",
+    "kvasnic"
+  ],
+  "BakingPowder": [
+    "prášok do pečiva",
+    "prášku do pečiva"
+  ],
+  "Starch": [
+    "škrob"
+  ],
+  "TeaLeaves": [
+    "čajové lístk",
+    "čajových lístk"
+  ]
+}

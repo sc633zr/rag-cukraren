@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG Cukráreň</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%233b2620'/><text x='50' y='66' font-size='52' text-anchor='middle' fill='%23f4ece1' font-family='Georgia'>C</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="/vendor/marked.min.js"></script>
+<script src="/vendor/vis-network.min.js"></script>
+<style>
+:root{
+  --bg:#fbf6ef; --panel:#ffffff; --panel2:#f6eee3; --ink:#2b1d17; --muted:#7a6558; --line:#eadccb;
+  --choc:#5a3426; --accent:#c2185b; --accent-soft:#fbe3ee; --caramel:#c98b4b; --mint:#2e7d6b; --mint-soft:#dff2ec;
+  --sem:#6a4bc4; --sem-soft:#ece6fb; --shadow:0 1px 2px rgba(60,30,20,.06),0 4px 16px rgba(60,30,20,.06);
+  --radius:14px; --font:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+}
+:root[data-theme="dark"]{
+  --bg:#17110e; --panel:#221915; --panel2:#2b201b; --ink:#f3e9df; --muted:#b59f90; --line:#3a2c25;
+  --choc:#e2b48f; --accent:#ff5c9a; --accent-soft:#3d1a29; --caramel:#e0a466; --mint:#5fd0b4; --mint-soft:#183a32;
+  --sem:#a891ff; --sem-soft:#2a2342; --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px}
+a{color:var(--accent)}
+header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.logo{font-weight:700;font-size:20px;color:var(--choc);display:flex;align-items:center;gap:8px}
+.logo small{font-weight:500;color:var(--muted);font-size:13px}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{border:0;background:transparent;color:var(--muted);padding:8px 12px;border-radius:10px;cursor:pointer;font:inherit;font-weight:600}
+nav button.active{background:var(--accent-soft);color:var(--accent)}
+nav button:hover{color:var(--ink)}
+.spacer{flex:1}
+.pill{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--panel2);color:var(--muted);white-space:nowrap}
+.pill.ok{background:var(--mint-soft);color:var(--mint)} .pill.bad{background:var(--accent-soft);color:var(--accent)}
+.iconbtn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:6px 10px;cursor:pointer;font:inherit}
+main{padding:18px 20px;max-width:1500px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+h2{font-size:17px;margin:0 0 10px;color:var(--choc)} h3{font-size:14px;margin:0 0 8px;color:var(--choc)}
+.muted{color:var(--muted)} .small{font-size:12.5px}
+
+/* --- chat --- */
+.chatgrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;height:calc(100vh - 110px)}
+.chatcol{display:flex;flex-direction:column;min-height:0}
+#messages{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:92%;padding:12px 14px;border-radius:14px;line-height:1.5}
+.msg.user{align-self:flex-end;background:var(--choc);color:var(--bg);border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:var(--panel2);border-bottom-left-radius:4px}
+.msg.bot p{margin:.3em 0} .msg.bot ul{margin:.3em 0;padding-left:1.3em}
+.cite{display:inline-block;font-size:12px;padding:1px 7px;margin:0 2px;border-radius:7px;background:var(--panel);border:1px solid var(--line);text-decoration:none;color:var(--choc)}
+.cite.onto{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.msgfoot{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.msgfoot button{border:1px solid var(--line);background:var(--panel);border-radius:8px;cursor:pointer;padding:2px 8px;color:var(--ink)}
+.msgfoot button.sel{background:var(--mint-soft);border-color:var(--mint)}
+details.why{margin-top:8px;font-size:13px;color:var(--muted)}
+details.why summary{cursor:pointer;font-weight:600;color:var(--choc)}
+.typing span{display:inline-block;width:7px;height:7px;margin:0 2px;border-radius:50%;background:var(--muted);animation:b 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
+.welcome{margin:auto;text-align:center;max-width:560px;padding:20px}
+.welcome .big{font-size:46px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 12px;cursor:pointer;font:inherit;font-size:13px;color:var(--ink)}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.composer{border-top:1px solid var(--line);padding:12px;display:flex;gap:10px;align-items:flex-end}
+.composer textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;background:var(--bg);color:var(--ink);max-height:140px}
+.btn{border:0;background:var(--accent);color:#fff;border-radius:12px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.opts{display:flex;gap:14px;padding:0 14px 10px;font-size:12.5px;color:var(--muted);align-items:center;flex-wrap:wrap}
+
+/* --- pipeline --- */
+.pipe{overflow:auto;padding:16px;min-height:0}
+.steps{display:flex;gap:6px;margin-bottom:14px}
+.step{flex:1;text-align:center;font-size:12px;padding:8px 4px;border-radius:10px;background:var(--panel2);color:var(--muted);font-weight:600;position:relative}
+.step.run{background:var(--accent-soft);color:var(--accent)} .step.run::after{content:"";position:absolute;left:10%;right:10%;bottom:3px;height:2px;background:var(--accent);animation:pulse 1s infinite alternate}
+.step.ok{background:var(--mint-soft);color:var(--mint)}
+@keyframes pulse{from{opacity:.2}to{opacity:1}}
+.sect{margin-bottom:16px}
+.sect h3{display:flex;align-items:center;gap:6px}
+.cchip{display:inline-block;padding:4px 10px;border-radius:999px;margin:0 6px 6px 0;font-size:12.5px;cursor:pointer;border:1px solid transparent}
+.cchip.main{background:var(--accent);color:#fff} .cchip.nb{background:var(--panel2);color:var(--muted);border-color:var(--line)}
+.fact{font-size:12.5px;padding:5px 8px;border-radius:8px;margin-bottom:4px;background:var(--panel2);font-family:Consolas,monospace}
+.fact.sem{background:var(--sem-soft)} .fact.sem{border-left:3px solid var(--sem)}
+.src{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--panel)}
+.src .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.src .name{font-weight:600;font-size:13px;color:var(--choc);word-break:break-all}
+.bars{display:grid;grid-template-columns:60px 1fr 42px;gap:4px 8px;align-items:center;font-size:11.5px;color:var(--muted);margin:8px 0}
+.bar{height:7px;border-radius:4px;background:var(--panel2);overflow:hidden}.bar i{display:block;height:100%;border-radius:4px}
+.bar.v i{background:var(--caramel)} .bar.k i{background:var(--mint)}
+.snip{font-size:12.5px;color:var(--muted);max-height:3.9em;overflow:hidden;cursor:pointer}
+.snip.open{max-height:none;color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:var(--panel2);border-radius:10px;padding:8px;text-align:center}
+.stat b{display:block;font-size:18px;color:var(--choc)} .stat span{font-size:11px;color:var(--muted)}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 10px}
+
+/* --- graf --- */
+.graphgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;height:calc(100vh - 110px)}
+#graph{height:100%;border-radius:var(--radius)}
+.gtools{display:flex;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap;font-size:13px}
+.gtools input[type=search]{border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--bg);color:var(--ink);font:inherit}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.side{padding:16px;overflow:auto}
+
+/* --- ontologia / docs / eval --- */
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:16px}
+.preset{padding:14px;cursor:pointer;text-align:left;font:inherit;color:var(--ink)}
+.preset:hover{border-color:var(--accent)} .preset .ic{font-size:22px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left} th{color:var(--muted);font-weight:600;background:var(--panel2)}
+.speed{display:inline-block;background:var(--mint-soft);color:var(--mint);padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:600}
+textarea.code{width:100%;min-height:130px;font-family:Consolas,monospace;font-size:13px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:var(--ink)}
+.docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.doc{padding:14px}
+.doc .nm{font-weight:600;color:var(--choc);word-break:break-all}
+.kv{display:flex;gap:12px;font-size:12.5px;color:var(--muted);margin:6px 0 10px}
+.md table{margin:10px 0} .md{line-height:1.55}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin:12px 0}
+.fbox{flex:1;min-width:150px;padding:12px;border-radius:12px;background:var(--panel2);font-size:13px}
+.fbox b{display:block;color:var(--choc);margin-bottom:4px}
+.farrow{align-self:center;color:var(--caramel);font-size:20px}
+/* --- režim pre zákazníka (bez technických detailov) / technický režim (body.tech) --- */
+body:not(.tech) .tech{display:none!important}
+body:not(.tech) .chatgrid{grid-template-columns:minmax(0,860px);justify-content:center}
+body:not(.tech) .cite.onto{display:none}
+.iconbtn.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.item{padding:18px;display:flex;flex-direction:column;gap:8px}
+.item .ic{font-size:40px}
+.item .nm{font-size:18px;font-weight:700;color:var(--choc);text-transform:capitalize}
+.item .pr{font-size:20px;font-weight:700;color:var(--accent)}
+.item .ing{font-size:13px;color:var(--muted)}
+.item .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+@media (max-width:980px){.chatgrid,.graphgrid{grid-template-columns:1fr;height:auto}.chatcol{height:75vh}#graph{height:65vh}}
+
+/* ================= vzhľad cukrárne (moderný, bez emoji) ================= */
+:root{
+  --bg:#f7f2ea; --panel:#fffdf9; --panel2:#f0e8dc; --ink:#2a1d18; --muted:#8a7668; --line:#e6dccd;
+  --choc:#3b2620; --accent:#9c5b3f; --accent-soft:#f3e6da; --caramel:#c08a5b;
+  --shadow:0 1px 1px rgba(59,38,32,.03),0 8px 30px rgba(59,38,32,.06);
+  --radius:20px; --font:"Inter","Segoe UI",system-ui,sans-serif; --serif:"Cormorant Garamond",Georgia,serif;
+}
+:root[data-theme="dark"]{
+  --bg:#141010; --panel:#1c1715; --panel2:#262019; --ink:#f1e8dd; --muted:#a8968a; --line:#332924;
+  --choc:#efd9c3; --accent:#d9a07e; --accent-soft:#33261f; --caramel:#d9a07e;
+  --shadow:0 8px 30px rgba(0,0,0,.35);
+}
+body{letter-spacing:.005em}
+header{padding:18px 32px;gap:28px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.logo{font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:.01em;color:var(--choc);flex-direction:column;align-items:flex-start;gap:0;line-height:1}
+.logo small{font-family:var(--font);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+nav{gap:22px}
+nav button{padding:6px 0;border-radius:0;font-weight:500;font-size:14px;border-bottom:1px solid transparent}
+nav button.active{background:transparent;color:var(--ink);border-bottom-color:var(--ink)}
+.iconbtn{border-radius:999px;padding:7px 14px;font-size:13px;display:inline-flex;align-items:center;gap:6px;background:transparent}
+.iconbtn:hover{border-color:var(--ink)}
+.iconbtn.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+main{padding:28px 32px}
+.card{border-radius:var(--radius)}
+h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:.01em} h2{font-size:24px} h3{font-size:18px}
+.eyebrow{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.display{font-family:var(--serif);font-weight:500;font-size:46px;line-height:1.05;margin:0 0 10px;color:var(--choc)}
+
+/* chat */
+.welcome{max-width:620px}
+.welcome h2{font-size:40px;font-weight:500;line-height:1.1;margin-bottom:12px}
+.chips{gap:10px;margin-top:26px}
+.chip{border-radius:999px;padding:9px 16px;font-size:13.5px;background:transparent;transition:all .15s}
+.chip:hover{border-color:var(--ink);color:var(--ink);background:var(--panel)}
+.msg{max-width:85%;padding:14px 18px;border-radius:18px;line-height:1.6}
+.msg.user{background:var(--choc);color:var(--bg);border-bottom-right-radius:6px}
+.msg.bot{background:var(--panel2);border-bottom-left-radius:6px}
+.composer{padding:16px;gap:10px}
+.composer textarea{border-radius:999px;padding:12px 20px;background:var(--panel2);border-color:transparent}
+.composer textarea:focus{outline:none;border-color:var(--line);background:var(--panel)}
+.btn{background:var(--choc);color:var(--bg);border-radius:999px;padding:12px 22px;font-weight:500}
+.btn:hover{background:var(--accent)}
+.opts{padding:0 18px 4px}
+#clearBtn{border:0;color:var(--muted);font-size:12.5px;text-decoration:underline;text-underline-offset:3px}
+.cite{border-radius:999px;font-size:11.5px;padding:1px 9px}
+details.why summary{font-family:var(--font);font-weight:500;font-size:12.5px;color:var(--muted)}
+.msgfoot button{border-radius:999px;padding:2px 10px;font-size:11.5px;background:transparent;color:var(--muted)}
+.msgfoot button.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* ponuka */
+.menuwrap{max-width:780px;margin:24px auto 40px;text-align:center}
+.menu{display:block;margin-top:40px;text-align:left}
+.item{padding:22px 0;border-top:1px solid var(--line);display:block}
+.item:last-child{border-bottom:1px solid var(--line)}
+.item .row{display:flex;align-items:baseline;gap:12px}
+.item .nm{font-family:var(--serif);font-size:28px;font-weight:500;margin:0;color:var(--choc);text-transform:none}
+.item .nm::first-letter{text-transform:uppercase}
+.item .lead{flex:1;border-bottom:1px dotted var(--muted);opacity:.5;transform:translateY(-6px)}
+.item .pr{font-family:var(--serif);font-size:24px;font-weight:600;color:var(--ink)}
+.item .ing{margin:6px 0 10px;color:var(--muted);font-size:14px}
+.item .wt{margin-left:8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.item .btns{display:flex;gap:18px}
+.link{border:0;background:none;padding:0;font:inherit;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);cursor:pointer;border-bottom:1px solid transparent}
+.link:hover{border-bottom-color:var(--accent)}
+@media (max-width:700px){header{padding:14px 16px;gap:14px} main{padding:16px} .display{font-size:34px} .welcome h2{font-size:30px} .item .nm{font-size:23px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Cukráreň<small>dezerty · torty · káva</small></div>
+  <nav id="nav">
+    <button data-tab="chat" class="active">Opýtajte sa</button>
+    <button data-tab="menu">Ponuka</button>
+    <button data-tab="graf" class="tech">Graf ontológie</button>
+    <button data-tab="onto" class="tech">Okamžité odpovede</button>
+    <button data-tab="docs" class="tech">Dokumenty</button>
+    <button data-tab="eval" class="tech">Hodnotenie</button>
+  </nav>
+  <div class="spacer"></div>
+  <span id="st-ollama" class="pill tech">Ollama …</span>
+  <span id="st-models" class="pill tech">modely …</span>
+  <button class="iconbtn" id="techBtn" title="Technické detaily (ontológia, vyhľadávanie, graf)" aria-label="Technické detaily"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  <button class="iconbtn" id="themeBtn" title="Svetlý / tmavý režim" aria-label="Svetlý / tmavý režim"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+</header>
+
+<main>
+<!-- ================= CHAT ================= -->
+<section class="tab active" id="tab-chat">
+  <div class="chatgrid">
+    <div class="card chatcol">
+      <div id="messages">
+        <div class="welcome" id="welcome">
+          <div class="eyebrow">Vitajte</div>
+          <h2>Dobrý deň! S čím vám môžeme pomôcť?</h2>
+          <div class="muted">Opýtajte sa na našu ponuku, ceny, zloženie dezertov alebo alergény.</div>
+          <div class="chips" id="suggest"></div>
+        </div>
+      </div>
+      <div class="opts">
+        <button class="chip" id="clearBtn" style="padding:3px 10px">nová konverzácia</button>
+      </div>
+      <div class="composer">
+        <textarea id="q" rows="1" placeholder="Napr. Z čoho je tiramisu?"></textarea>
+        <button class="btn" id="sendBtn">Opýtať sa</button>
+      </div>
+    </div>
+
+    <div class="card pipe tech" id="pipe">
+      <h2>Ako som to našiel</h2>
+      <div class="steps">
+        <div class="step" id="s-retrieve">1 · Ontológia + vyhľadávanie</div>
+        <div class="step" id="s-generate">2 · Generovanie odpovede</div>
+        <div class="step" id="s-done">3 · Hotovo</div>
+      </div>
+      <div id="pipeBody"><div class="empty">Tu sa po položení otázky zobrazia pojmy z ontológie, použité fakty,
+        nájdené úryvky z dokumentov so skóre a rýchlosť generovania.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PONUKA ================= -->
+<section class="tab" id="tab-menu">
+  <div class="menuwrap">
+    <div class="eyebrow">Ponuka</div>
+    <h1 class="display">Naše dezerty a káva</h1>
+    <p class="muted">Všetko pripravujeme ručne. Na požiadanie aj v bezlepkovom alebo bezlaktózovom variante.</p>
+    <div class="menu" id="menuList"><div class="empty">Načítavam…</div></div>
+  </div>
+</section>
+
+<!-- ================= GRAF ================= -->
+<section class="tab" id="tab-graf">
+  <div class="graphgrid">
+    <div class="card" style="display:flex;flex-direction:column;min-height:0">
+      <div class="gtools">
+        <input type="search" id="gsearch" placeholder="Hľadať pojem… (Enter)">
+        <label><input type="checkbox" id="gInd" checked> indivíduá</label>
+        <label><input type="checkbox" id="gDocs" checked> dokumenty</label>
+        <button class="chip" id="gFit" style="padding:4px 10px">⤢ celý graf</button>
+        <div class="legend">
+          <span><i class="dot" style="background:#c98b4b"></i>trieda</span>
+          <span><i class="dot" style="background:#2e7d6b"></i>indivíduum</span>
+          <span><i class="dot" style="background:#6a4bc4"></i>dokument</span>
+          <span><i class="dot" style="background:#c2185b"></i>pojem z poslednej otázky</span>
+        </div>
+      </div>
+      <div style="flex:1;min-height:0"><div id="graph"></div></div>
+    </div>
+    <div class="card side" id="gside"><div class="empty">Kliknite na uzol v grafe – zobrazia sa jeho fakty z ontológie
+      a dokumenty, ktoré ho spomínajú.</div></div>
+  </div>
+</section>
+
+<!-- ================= ONTOLÓGIA / SPARQL ================= -->
+<section class="tab" id="tab-onto">
+  <div class="card" style="padding:18px;margin-bottom:16px">
+    <h2>Okamžité odpovede z ontológie (SPARQL, bez LLM)</h2>
+    <div class="muted small" style="margin-bottom:12px">Štruktúrované otázky (ceny, kto čo pripravuje, suroviny) sa dajú
+      zodpovedať priamo dotazom do OWL ontológie – za milisekundy, presne a bez halucinácií. LLM je potrebné až pre
+      otázky, na ktoré treba text z dokumentov.</div>
+    <div class="presets" id="presets"></div>
+    <div id="sparqlOut"></div>
+  </div>
+  <div class="card" style="padding:18px">
+    <h3>Vlastný SPARQL dotaz</h3>
+    <textarea class="code" id="sparqlQ">SELECT ?produkt ?cena WHERE {
+  ?i ?p ?cena . ?p rdfs:label "hasPrice" . ?i rdfs:label ?produkt .
+}</textarea>
+    <div style="margin-top:8px"><button class="btn" id="sparqlRun">Spustiť</button>
+      <span class="muted small">Prefixy rdfs:, owl:, rdf: sú doplnené automaticky. Povolené sú len SELECT.</span></div>
+    <div id="sparqlOut2" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<!-- ================= DOKUMENTY ================= -->
+<section class="tab" id="tab-docs">
+  <h2>Dokumenty v indexe</h2>
+  <div class="muted small" style="margin-bottom:12px">Slovenské dokumenty dopĺňajú ontológiu o to, čo v nej nie je
+    (recepty, technológia, zloženie). Pojmy ontológie sa v nich hľadajú automaticky.</div>
+  <div class="docs" id="docList"></div>
+</section>
+
+<!-- ================= HODNOTENIE ================= -->
+<section class="tab" id="tab-eval">
+  <div class="card" style="padding:18px">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <h2 style="margin:0">Hodnotenie</h2>
+      <select id="evalSel" class="iconbtn"></select>
+    </div>
+    <div class="md" id="evalBody"></div>
+  </div>
+</section>
+
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const state = {history: [], lastConcepts: new Set(), busy: false, info: null};
+
+/* ---------- téma ---------- */
+function setTheme(t){ document.documentElement.dataset.theme = t; try{localStorage.setItem("theme", t)}catch(e){} if(net) styleGraph(); }
+try{ const t = localStorage.getItem("theme"); if(t) document.documentElement.dataset.theme = t;
+  else if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.dataset.theme = "dark"; }catch(e){}
+$("#themeBtn").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+
+/* ---------- záložky ---------- */
+document.querySelectorAll("#nav button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function showTab(name){
+  document.querySelectorAll("#nav button").forEach(x => x.classList.toggle("active", x.dataset.tab === name));
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x.id === "tab-" + name));
+  if (name === "menu") loadMenu();
+  if (name === "graf") initGraph();
+  if (name === "onto") initPresets();
+  if (name === "docs") loadDocs();
+  if (name === "eval") loadEval();
+}
+
+/* ---------- technický režim (pre učiteľa) ---------- */
+function setTech(on){
+  document.body.classList.toggle("tech", on); $("#techBtn").classList.toggle("on", on);
+  try{ localStorage.setItem("tech", on ? "1" : "0") }catch(e){}
+  const cur = document.querySelector("#nav button.active");
+  if (!on && cur && cur.classList.contains("tech")) showTab("chat");
+}
+$("#techBtn").onclick = () => setTech(!document.body.classList.contains("tech"));
+try{ setTech(localStorage.getItem("tech") === "1") }catch(e){}
+
+/* ---------- ponuka (produkty s cenou z ontológie) ---------- */
+async function loadMenu(){
+  const items = await (await fetch("/api/menu")).json();
+  const eur = v => v.toFixed(2).replace(".", ",") + " €";
+  $("#menuList").innerHTML = items.map(it => `<article class="item">
+      <div class="row"><h3 class="nm">${esc(it.name)}</h3><span class="lead"></span><span class="pr">${eur(it.price)}</span></div>
+      <p class="ing">${esc(it.ingredients.join(", "))}${it.weight ? ` <span class="wt">${esc(it.weight)} g</span>` : ""}</p>
+      <div class="btns"><button class="link" data-q="Z čoho je ${esc(it.name)}?">Zloženie</button>${it.has_allergens ? `
+        <button class="link" data-q="Aké alergény obsahuje ${esc(it.name)}?">Alergény</button>` : ""}</div></article>`).join("");
+  $("#menuList").querySelectorAll("[data-q]").forEach(b => b.onclick = () => { showTab("chat"); ask(b.dataset.q); });
+}
+
+/* ---------- info ---------- */
+async function loadInfo(){
+  try{
+    const i = await (await fetch("/api/info")).json(); state.info = i;
+    $("#st-ollama").textContent = i.ollama ? "● Ollama beží" : "● Ollama nebeží";
+    $("#st-ollama").className = "pill " + (i.ollama ? "ok" : "bad");
+    $("#st-models").textContent = `${i.llm} · ${i.embed}`;
+    $("#st-models").className = "pill " + (i.llm_ready && i.embed_ready ? "ok" : "bad");
+    $("#suggest").innerHTML = i.suggested.map(q => `<button class="chip">${esc(q)}</button>`).join("");
+    $("#suggest").querySelectorAll(".chip").forEach(c => c.onclick = () => ask(c.textContent));
+  }catch(e){ $("#st-ollama").textContent = "server nedostupný"; $("#st-ollama").className = "pill bad"; }
+}
+
+/* ---------- chat ---------- */
+const ta = $("#q");
+ta.addEventListener("input", () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 140) + "px"; });
+ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); ask(ta.value); }});
+$("#sendBtn").onclick = () => ask(ta.value);
+$("#clearBtn").onclick = () => { state.history = []; $("#messages").innerHTML = ""; $("#messages").appendChild(welcomeEl);
+  $("#pipeBody").innerHTML = '<div class="empty">Nová konverzácia.</div>'; setSteps(null); };
+const welcomeEl = $("#welcome");
+
+function addMsg(role, html){
+  welcomeEl.remove();
+  const d = document.createElement("div"); d.className = "msg " + role; d.innerHTML = html;
+  $("#messages").appendChild(d); $("#messages").scrollTop = 1e9; return d;
+}
+/* rozdelí výstup modelu na odpoveď a zdôvodnenie (zdôvodnenie sa zobrazí až na kliknutie) */
+function splitAnswer(text){
+  const sep = text.search(/\n\s*(-{3,}|\*{0,2}Zdôvodnenie:?\*{0,2})\s*/i);
+  if (sep >= 0) return {main: text.slice(0, sep).trim(), why: text.slice(sep).replace(/^\s*-{3,}\s*/, "").trim()};
+  // model dal odpoveď na koniec ("... Odpoveď: X") -> berieme posledný výskyt
+  const re = /\n\s*\*{0,2}(Odpoveď|Záver)\*{0,2}\s*:\*{0,2}\s*/gi; let last = null, m;
+  while ((m = re.exec(text))) last = m;
+  if (last && last.index > 80) return {main: text.slice(last.index + last[0].length).trim(), why: text.slice(0, last.index).trim()};
+  return {main: text.trim(), why: ""};
+}
+function renderFull(text, streaming){
+  const {main, why} = splitAnswer(text);
+  let html = renderAnswer(main || "…");
+  if (why) html += streaming ? '<div class="muted small" style="margin-top:6px">píšem zdôvodnenie…</div>'
+    : `<details class="why"><summary>Ukázať zdôvodnenie</summary>${renderAnswer(why)}</details>`;
+  return html;
+}
+function renderAnswer(text){
+  let html = marked.parse(text);
+  html = html.replace(/\[([^\[\],]+?\.(?:pdf|docx|txt)),\s*s\.\s*(\d+)\]/gi,
+    (m, f, p) => `<a class="cite" target="_blank" href="/api/pdf/${encodeURIComponent(f)}#page=${p}">${esc(f.replace(/^sk_|\.pdf$/g,""))} · s.${p}</a>`);
+  html = html.replace(/[\(\[]ontol[oó]gi[ae][^\)\]]{0,160}[\)\]]/gi, m => `<span class="cite onto" title="${m.slice(1,-1)}">ontológia</span>`);
+  return html;
+}
+function setSteps(stage){
+  const order = ["retrieve","generate","done"];
+  order.forEach((s,i) => { const el = $("#s-" + s); el.className = "step";
+    if (stage){ const k = order.indexOf(stage); if (i < k) el.classList.add("ok"); else if (i === k) el.classList.add(stage === "done" ? "ok" : "run"); } });
+}
+
+let timerId = null;
+async function ask(q){
+  q = (q || "").trim(); if (!q || state.busy) return;
+  state.busy = true; $("#sendBtn").disabled = true; ta.value = ""; ta.style.height = "auto";
+  addMsg("user", esc(q));
+  const bot = addMsg("bot", '<div class="typing"><span></span><span></span><span></span></div>');
+  const pipe = $("#pipeBody");
+  pipe.innerHTML = `<div class="sect"><div class="stats" id="liveStats">
+      <div class="stat"><b id="tTotal">0.0 s</b><span>čas</span></div>
+      <div class="stat"><b id="tRet">–</b><span>vyhľadávanie</span></div>
+      <div class="stat"><b id="tFirst">–</b><span>prvé slovo</span></div>
+      <div class="stat"><b id="tTok">–</b><span>tokenov/s</span></div></div></div>
+    <div id="pConcepts"></div><div id="pFacts"></div><div id="pSources"></div>`;
+  const t0 = performance.now();
+  clearInterval(timerId); timerId = setInterval(() => { const e = $("#tTotal"); if (e) e.textContent = ((performance.now()-t0)/1000).toFixed(1) + " s"; }, 100);
+  setSteps("retrieve");
+
+  let answer = "", sources = [], raf = null;
+  const paint = () => { bot.innerHTML = renderFull(answer, true) + '<span class="typing" style="margin-left:4px"><span></span></span>'; $("#messages").scrollTop = 1e9; raf = null; };
+  try{
+    const res = await fetch("/api/ask", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({question:q, history: state.history.slice(-6)})});
+    const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
+    while (true){
+      const {value, done} = await reader.read(); if (done) break;
+      buf += dec.decode(value, {stream:true});
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0){
+        const block = buf.slice(0, i); buf = buf.slice(i + 2);
+        const ev = (block.match(/^event: (.*)$/m) || [])[1]; const data = JSON.parse((block.match(/^data: (.*)$/m) || [,"null"])[1]);
+        if (ev === "stage"){ setSteps(data.stage); if (data.retrieve_s !== undefined) $("#tRet").textContent = data.retrieve_s + " s"; }
+        else if (ev === "concepts") showConcepts(data);
+        else if (ev === "facts") showFacts(data.facts);
+        else if (ev === "sources"){ sources = data.sources; showSources(sources); }
+        else if (ev === "token"){ if (!answer) $("#tFirst").textContent = ((performance.now()-t0)/1000).toFixed(1) + " s";
+          answer += data.t; if (!raf) raf = requestAnimationFrame(paint); }
+        else if (ev === "done"){ setSteps("done"); $("#tTok").textContent = data.tok_per_s; finish(data); }
+        else if (ev === "error"){ bot.innerHTML = `<b>Chyba:</b> ${esc(data.message)}`; }
+      }
+    }
+  }catch(e){ bot.innerHTML = `<b>Chyba spojenia:</b> ${esc(e.message)}`; }
+  clearInterval(timerId); state.busy = false; $("#sendBtn").disabled = false;
+
+  function finish(stats){
+    if (raf) cancelAnimationFrame(raf);
+    bot.innerHTML = renderFull(answer || "_(prázdna odpoveď)_", false) +
+      `<div class="msgfoot"><span class="tech">${stats.total_s} s · ${stats.model}</span></div>`;
+    state.history.push({role:"user", content:q}, {role:"assistant", content: splitAnswer(answer).main || answer});  // len odpoveď = kratší prompt
+    $("#messages").scrollTop = 1e9;
+  }
+}
+
+function showConcepts(d){
+  state.lastConcepts = new Set(d.concepts);
+  const chip = (c, cls) => `<span class="cchip ${cls}" data-c="${esc(c)}" title="${esc(d.sk[c] || "")}">${esc(c)}${d.sk[c] ? " · " + esc(d.sk[c]) : ""}</span>`;
+  $("#pConcepts").innerHTML = `<div class="sect"><h3>Pojmy z ontológie v otázke</h3>
+    ${d.concepts.length ? d.concepts.map(c => chip(c,"main")).join("") : '<span class="muted small">žiadne priame pojmy</span>'}
+    ${d.neighbours.length ? `<div class="muted small" style="margin:4px 0">susedia v grafe:</div>` + d.neighbours.slice(0,14).map(c => chip(c,"nb")).join("") : ""}
+    <div class="small" style="margin-top:4px"><a href="#" id="toGraph">zobraziť v grafe →</a></div></div>`;
+  $("#pConcepts").querySelectorAll(".cchip").forEach(x => x.onclick = () => { showTab("graf"); setTimeout(() => focusNode(x.dataset.c), 300); });
+  $("#toGraph").onclick = e => { e.preventDefault(); showTab("graf"); setTimeout(highlightGraph, 300); };
+  if (net) highlightGraph();
+}
+function showFacts(facts){
+  $("#pFacts").innerHTML = `<div class="sect"><h3>Fakty z ontológie v prompte <span class="muted small">(${facts.length})</span></h3>
+    ${facts.length ? facts.map(f => `<div class="fact ${f.semantic ? "sem" : ""}" title="${f.semantic ? "nájdené významovo cez BGE-M3" : "nájdené cez pojmy v otázke"}">${esc(f.text)}</div>`).join("")
+      : '<div class="muted small">žiadne</div>'}
+    <div class="muted small">fialový okraj = fakt nájdený podľa významu (BGE-M3), ostatné cez pojmy v otázke</div></div>`;
+}
+function showSources(src){
+  const maxB = Math.max(1, ...src.map(s => s.bm25));
+  $("#pSources").innerHTML = `<div class="sect"><h3>Nájdené úryvky z dokumentov <span class="muted small">(top ${src.length})</span></h3>
+    ${src.length ? src.map((s, i) => `<div class="src"><div class="top"><span class="name">${i+1}. ${esc(s.source)} · s. ${s.page}</span>
+      <a class="cite" target="_blank" href="/api/pdf/${encodeURIComponent(s.source)}#page=${s.page}">otvoriť</a></div>
+      <div class="bars"><span>vektor</span><div class="bar v"><i style="width:${Math.max(0,s.cos)*100}%"></i></div><span>${s.cos.toFixed(2)}</span>
+        <span>BM25</span><div class="bar k"><i style="width:${s.bm25/maxB*100}%"></i></div><span>${s.bm25.toFixed(1)}</span></div>
+      <div class="snip" onclick="this.classList.toggle('open')">${esc(s.text)}</div></div>`).join("")
+      : '<div class="muted small">nenašli sa relevantné úryvky</div>'}</div>`;
+}
+
+/* ---------- graf ---------- */
+let net = null, gdata = null, nodesDS = null, edgesDS = null;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+async function initGraph(){
+  if (net) { highlightGraph(); return; }
+  gdata = await (await fetch("/api/graph")).json();
+  nodesDS = new vis.DataSet(); edgesDS = new vis.DataSet();
+  net = new vis.Network($("#graph"), {nodes: nodesDS, edges: edgesDS}, {
+    physics: {barnesHut: {gravitationalConstant: -9000, springLength: 130}, stabilization: {iterations: 250}},
+    interaction: {hover: true, tooltipDelay: 120}, edges: {smooth: {type: "continuous"}, font: {size: 10, strokeWidth: 0}}});
+  net.on("click", p => { if (p.nodes.length) showNode(p.nodes[0]); });
+  ["#gInd","#gDocs"].forEach(s => $(s).onchange = styleGraph);
+  $("#gFit").onclick = () => net.fit({animation: true});
+  $("#gsearch").onkeydown = e => { if (e.key === "Enter"){ const q = e.target.value.toLowerCase();
+    const n = gdata.nodes.find(n => n.id.toLowerCase().includes(q) || (n.sk || "").toLowerCase().includes(q)); if (n) focusNode(n.id); } };
+  styleGraph();
+}
+function styleGraph(){
+  if (!gdata) return;
+  const showInd = $("#gInd").checked, showDocs = $("#gDocs").checked, ink = css("--ink"), muted = css("--muted");
+  const col = {class: "#c98b4b", individual: "#2e7d6b", document: "#6a4bc4"};
+  const nodes = gdata.nodes.filter(n => showInd || n.kind !== "individual").map(n => {
+    const hl = state.lastConcepts.has(n.id);
+    return {id: n.id, label: n.id + (n.sk ? "\n" + n.sk : ""), shape: n.kind === "class" ? "dot" : "diamond",
+      size: hl ? 26 : (n.kind === "class" ? 14 : 10), color: {background: hl ? "#c2185b" : col[n.kind], border: hl ? "#c2185b" : col[n.kind]},
+      font: {color: ink, size: hl ? 16 : 12, multi: false}, borderWidth: hl ? 4 : 1,
+      title: `${n.kind}${n.sk ? " · " + n.sk : ""}` + Object.entries(n.data || {}).map(([k,v]) => `\n${k}: ${v}`).join("")};
+  });
+  if (showDocs) gdata.docs.forEach(d => nodes.push({id: d.id, label: d.label.replace(/^sk_|\.pdf$/g, ""), shape: "box",
+    color: {background: "#6a4bc4", border: "#6a4bc4"}, font: {color: "#fff", size: 11}, title: d.label}));
+  const ids = new Set(nodes.map(n => n.id));
+  const ecol = {subclass: muted, instance: "#2e7d6b", relation: "#c2185b", mentions: "#6a4bc4"};
+  const edges = gdata.edges.filter(e => ids.has(e.from) && ids.has(e.to)).map((e, i) => ({id: i, from: e.from, to: e.to,
+    label: e.kind === "relation" ? e.label : "", arrows: e.kind === "mentions" ? "" : "to", dashes: e.kind === "instance",
+    width: e.kind === "mentions" ? Math.min(1 + (e.value || 1) / 4, 6) : 1, color: {color: ecol[e.kind] || muted, opacity: e.kind === "mentions" ? .35 : .8},
+    font: {color: muted}}));
+  nodesDS.clear(); edgesDS.clear(); nodesDS.add(nodes); edgesDS.add(edges);
+}
+function highlightGraph(){ if (!net) return; styleGraph(); const ids = [...state.lastConcepts].filter(i => nodesDS.get(i));
+  if (ids.length) net.fit({nodes: ids, animation: true}); }
+function focusNode(id){ if (!net){ initGraph().then(() => focusNode(id)); return; }
+  if (!nodesDS.get(id)) return; net.selectNodes([id]); net.focus(id, {scale: 1.2, animation: true}); showNode(id); }
+async function showNode(id){
+  const d = await (await fetch("/api/concept/" + encodeURIComponent(id))).json(); const side = $("#gside");
+  if (d.kind === "document"){
+    side.innerHTML = `<h2>${esc(d.name)}</h2><div class="muted small">${d.chunks} úryvkov</div>
+      <h3 style="margin-top:12px">Pojmy ontológie v dokumente</h3>${d.concepts.map(([c,n]) => `<span class="cchip nb" onclick="focusNode('${esc(c)}')">${esc(c)} · ${n}×</span>`).join("")}
+      <p><a class="cite" target="_blank" href="/api/pdf/${encodeURIComponent(d.name)}">otvoriť PDF</a></p>`; return; }
+  side.innerHTML = `<h2>${esc(d.name)} ${d.sk ? `<span class="muted small">· ${esc(d.sk)}</span>` : ""}</h2>
+    <div class="muted small">${d.kind === "class" ? "trieda" : "indivíduum"}</div>
+    ${Object.keys(d.data || {}).length ? `<table style="margin:10px 0">${Object.entries(d.data).map(([k,v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</table>` : ""}
+    <h3 style="margin-top:12px">Fakty z ontológie</h3>${d.facts.map(f => `<div class="fact">${esc(f)}</div>`).join("") || '<div class="muted small">–</div>'}
+    <h3 style="margin-top:12px">Spomína sa v dokumentoch</h3>${d.docs.length ? d.docs.map(x => `<div class="src"><div class="top"><span class="name">${esc(x.source)}</span><span class="muted small">${x.count}×</span></div>
+      <div class="snip" onclick="this.classList.toggle('open')">${esc(x.sample)}…</div></div>`).join("") : '<div class="muted small">v žiadnom dokumente</div>'}
+    <button class="btn" style="margin-top:8px" onclick="showTab('chat');ask('Čo vieš o pojme ${esc(d.sk || d.name)}?')">Opýtať sa na tento pojem</button>`;
+}
+
+/* ---------- SPARQL ---------- */
+let presetsLoaded = false;
+async function initPresets(){
+  if (presetsLoaded) return; presetsLoaded = true;
+  const ps = await (await fetch("/api/sparql/presets")).json();
+  $("#presets").innerHTML = ps.map(p => `<button class="card preset" data-id="${p.id}"><div class="ic">${p.icon}</div><b>${esc(p.title)}</b></button>`).join("");
+  $("#presets").querySelectorAll(".preset").forEach(b => b.onclick = () => { const p = ps.find(x => x.id === b.dataset.id);
+    $("#sparqlQ").value = p.query; runSparql(p.query, "#sparqlOut", p.title); });
+  $("#sparqlRun").onclick = () => runSparql($("#sparqlQ").value, "#sparqlOut2", "Vlastný dotaz");
+}
+async function runSparql(q, target, title){
+  const out = $(target); out.innerHTML = '<div class="muted">…</div>';
+  const r = await fetch("/api/sparql", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({query:q})});
+  const d = await r.json();
+  if (!r.ok){ out.innerHTML = `<div class="pill bad">${esc(d.detail)}</div>`; return; }
+  out.innerHTML = `<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><h3 style="margin:0">${esc(title)}</h3>
+    <span class="speed">${d.ms} ms · ${d.rows.length} riadkov · bez LLM</span></div>
+    <table><tr>${d.vars.map(v => `<th>${esc(v)}</th>`).join("")}</tr>${d.rows.map(r => `<tr>${r.map(c => `<td>${esc(c) || '<span class="muted">–</span>'}</td>`).join("")}</tr>`).join("")}</table>`;
+}
+
+/* ---------- dokumenty ---------- */
+async function loadDocs(){
+  const ds = await (await fetch("/api/docs")).json();
+  $("#docList").innerHTML = ds.map(d => `<div class="card doc"><div class="nm">${esc(d.name)}</div>
+    <div class="kv"><span>${d.pages} str.</span><span>${d.chunks} úryvkov</span><span>${d.size_kb} kB</span></div>
+    <div>${d.concepts.map(c => `<span class="cchip nb" onclick="showTab('graf');setTimeout(()=>focusNode('${esc(c)}'),300)">${esc(c)}</span>`).join("")}</div>
+    <a class="cite" target="_blank" href="/api/pdf/${encodeURIComponent(d.name)}">otvoriť</a></div>`).join("");
+}
+
+/* ---------- hodnotenie ---------- */
+let evalFiles = null;
+async function loadEval(){
+  if (!evalFiles){ evalFiles = await (await fetch("/api/eval")).json();
+    const names = Object.keys(evalFiles); const pref = names.find(n => n.startsWith("retrieval")) || names[0];
+    $("#evalSel").innerHTML = names.map(n => `<option ${n === pref ? "selected" : ""}>${esc(n)}</option>`).join("");
+    $("#evalSel").onchange = () => $("#evalBody").innerHTML = marked.parse(evalFiles[$("#evalSel").value]); }
+  $("#evalBody").innerHTML = marked.parse(evalFiles[$("#evalSel").value] || "");
+}
+
+loadInfo();
+</script>
+</body>
+</html>
